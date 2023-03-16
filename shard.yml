@@ -1,0 +1,13 @@
+name: toyweb
+version: 0.1.0
+
+authors:
+  - Joel Kuhn <joelakuhn@gmail.com>
+
+targets:
+  toyweb:
+    main: src/toyweb.cr
+
+crystal: 1.7.2
+
+license: MIT
