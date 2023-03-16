@@ -6,7 +6,7 @@ authors:
 
 targets:
   toyweb:
-    main: src/toyweb.cr
+    main: src/main.cr
 
 crystal: 1.7.2
 

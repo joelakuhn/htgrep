@@ -1,4 +1,4 @@
-require "./dom.cr"
+require "xml"
 
 enum SelectorType
     Universal
@@ -14,12 +14,21 @@ class SimpleSelector
 
     def initialize(@type, @value = nil); end
 
-    def matches(element : Element) : Bool
+    def has_class(node : XML::Node, value : String)
+        class_attr = node["class"]?
+        if class_attr.nil?
+            return false
+        end
+        classes = class_attr.split(/\s+/).map(&.downcase)
+        return classes.includes?(value.downcase)
+    end
+
+    def matches(node : XML::Node) : Bool
         return case @type
         when SelectorType::Universal then true;
-        when SelectorType::TagName then element.tag_name == @value
-        when SelectorType::Class then element.has_class(@value.as(String))
-        when SelectorType::Id then element.get_attribute("id") == @value
+        when SelectorType::TagName then node.name == @value
+        when SelectorType::Class then has_class(node, @value.as(String))
+        when SelectorType::Id then !node["id"].nil? && node["id"]? == @value
         else false
         end
     end
@@ -43,9 +52,9 @@ class CompoundSelector
 
     def initialize(@combinator, @simple_selectors); end
 
-    def matches(element : Element) : Bool
+    def matches(node : XML::Node) : Bool
         @simple_selectors.each do |simple_selector|
-            unless simple_selector.matches(element)
+            if !simple_selector.matches(node)
                 return false
             end
         end
@@ -63,10 +72,10 @@ class Selector
 
     def initialize(@text, @compound_selectors); end
 
-    def matches(element : Element, i = @compound_selectors.size - 1) : Bool
+    def matches(node : XML::Node, i = @compound_selectors.size - 1) : Bool
 
         selector = @compound_selectors[i]
-        if !selector.matches(element)
+        if !selector.matches(node)
             return false
         end
 
@@ -74,36 +83,35 @@ class Selector
             return true
 
         elsif selector.combinator == Combinator::ImmediateChild
-            if element.parent.nil? || !element.parent.is_a?(Element)
+            if node.parent.nil?
                 return false
             else
-                return matches(element.parent.as(Element), i - 1)
+                return matches(node.parent.as(XML::Node), i - 1)
             end
+
         elsif selector.combinator == Combinator::Child
-            current = element
-            while current.parent && current.parent.is_a?(Element)
-                current = current.parent.as(Element)
+            current = node
+            until current.parent.nil?
+                current = current.parent.as(XML::Node)
                 if matches(current, i - 1)
                     return true
                 end
             end
             return false
-        elsif selector.combinator == Combinator::ImmediateSibling || selector.combinator == Combinator::Sibling
-            if element.parent && element.parent.is_a?(Element)
-                children = element.parent.as(Element).children
-                child_index = children.index(element)
-                sibling_index = child_index.nil? ? -1 : child_index - 1
-                until sibling_index < 0
-                    if children[sibling_index].is_a?(Element)
-                        if matches(children[sibling_index].as(Element), i - 1)
-                            return true
-                        elsif selector.combinator == Combinator::ImmediateSibling
-                            return false
-                        else
-                            sibling_index -= 1
-                        end
-                    end
+
+        elsif selector.combinator == Combinator::ImmediateSibling
+            if node.previous.nil?
+                return false
+            end
+            return matches(node.previous.as(XML::Node), i - 1)
+
+        elsif selector.combinator == Combinator::Sibling
+            current = node.previous
+            until current.nil?
+                if matches(current.as(XML::Node), i - 1)
+                    return true
                 end
+                current = current.previous
             end
         end
         return false
