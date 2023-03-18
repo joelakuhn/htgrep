@@ -20,7 +20,7 @@ class CSSParser
         pieces.map do |simple|
             case simple.chars[0]
             when '.'
-                SimpleSelector.new(SelectorType::Class, simple[1, simple.size - 1])
+                SimpleSelector.new(SelectorType::Class, simple[1, simple.size - 1].downcase)
             when '#'
                 SimpleSelector.new(SelectorType::Id, simple[1, simple.size - 1])
             when '*'

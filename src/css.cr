@@ -20,7 +20,7 @@ class SimpleSelector
             return false
         end
         classes = class_attr.split(/\s+/).map(&.downcase)
-        return classes.includes?(value.downcase)
+        return classes.includes?(value)
     end
 
     def matches(node : XML::Node) : Bool
@@ -72,9 +72,35 @@ class Selector
 
     def initialize(@text, @compound_selectors); end
 
-    def matches(node : XML::Node, i = @compound_selectors.size - 1) : Bool
+    def to_s
+        return compound_selectors.map(&.to_s).join("|")
+    end
+end
 
-        selector = @compound_selectors[i]
+class Matcher
+    property selector : Selector
+    # property cache : Array(Hash(UInt64, Bool));
+    # property hits = 0
+
+    def initialize(@selector);
+        # @cache = Array(Hash(UInt64, Bool)).new(@selector.compound_selectors.size) do
+        #     Hash(UInt64, Bool).new
+        # end
+    end
+
+    # def record(node, index, result)
+    #     @cache[index][node.object_id] = result
+    # end
+
+    def matches(node : XML::Node, i = @selector.compound_selectors.size - 1) : Bool
+        selector = @selector.compound_selectors[i]
+
+        # cached_result = @cache[i][node.object_id]?
+        # unless cached_result.nil?
+        #     @hits += 1
+        #     return cached_result.as(Bool)
+        # end
+
         if !selector.matches(node)
             return false
         end
@@ -115,9 +141,5 @@ class Selector
             end
         end
         return false
-    end
-
-    def to_s
-        return compound_selectors.map(&.to_s).join("|")
     end
 end
